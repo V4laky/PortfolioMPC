@@ -16,28 +16,37 @@ def make_scenario(nobs:int, freq:str, market:Market, burn:int, init_value:float|
     if freq not in ('daily', 'weekly', 'monthly'):
         raise ValueError("Frequency must be one of 'daily', 'weekly', or 'monthly'")
     
-    r.index = pd.date_range(start='2024-01-01', periods=len(r.index), freq='B')
+    ii = pd.date_range(start='2024-01-01', periods=len(r.index), freq='B')
+    r.index, r_m.index, m_vol.index = ii, ii, ii
+
+    if linear:
+        r = np.exp(r) - 1
+        r_m = np.exp(r_m) - 1
 
     if freq == 'monthly':
         rule = 'ME'
     elif freq == 'weekly':
         rule = 'W-FRI'
 
-    if rule is not None:
+    if rule is not None: # TODO: Doesnt handle freq='daily'
         scenario = r.resample(rule).sum()
             
         if return_last:
-            last_r = r.resample(rule).last()
+            # NOTE: We only need market when also returning last
+            market_return = r_m.resample(rule).sum()
 
-            return scenario.iloc[:nobs], last_r.iloc[:nobs]
+            last_r_m = r_m.resample(rule).last()
+            last_m_vol = m_vol.resample(rule).last()
+
+            return scenario.iloc[:nobs], market_return.iloc[:nobs],\
+                    last_r_m.iloc[:nobs], last_m_vol[:nobs]
     
     return scenario.iloc[:nobs]
 
 def generate_scenarios(K:int, T:int, N:int, freq:str, market:Market, burn:int, init_value:float|None=None, init_vol:float|None=None):
     scenarios = np.zeros((K,T,N))
-    lasts = np.zeros((K,T,N))
 
     for k in range(K):
-        scenarios[k], lasts[k] = make_scenario(T, freq, market, burn, init_value, init_vol, return_last=True)
+        scenarios[k] = make_scenario(T, freq, market, burn, init_value, init_vol)
 
-    return scenarios, lasts
+    return scenarios
