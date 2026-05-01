@@ -25,7 +25,6 @@ class MPCController():
         self.x = [cp.Variable((K, N+1), nonneg = True) for _ in range(T)]  # scenario number, time, ith asset - and no shorting
 
         # AUX variables
-        self.tau = cp.Variable(nonneg = True) # auxiliary variable for excess loss below 40%
         self.z = cp.Variable() # expected final wealth
         
         # negative and positive trades
@@ -61,10 +60,6 @@ class MPCController():
 
 
         final_wealth = cp.sum(self.x[T-1], axis=1)  # shape (K,)
-        
-        constraints.append(
-            0.6*cp.sum(self.x0) - final_wealth <= self.tau
-        )
 
         constraints.append(self.z == cp.sum(final_wealth) / K)
         
@@ -77,8 +72,7 @@ class MPCController():
             risk_measure = cp.var(self.downside)
 
         objective = cp.Maximize(
-            self.z - 0.5 * self.tau 
-            - self.risk * risk_measure
+            self.z - self.risk * risk_measure
             )
 
         self.problem = cp.Problem(objective, constraints)
