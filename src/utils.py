@@ -129,6 +129,10 @@ def simulate_target_weight_portfolio(x0, w_target, rf, returns, trading_cost):
     for i, col in enumerate(returns.columns):
         x_prev = sims[-1]
 
+        # We shrink total wealth from W_pre to `l` to pay for trading,
+        # and choose `l` so that the cost of moving from x_prev to l*w_target
+        # exactly matches that shrinkage.
+
         def f(l):
             return -l + sum(x_prev) - trading_cost * np.linalg.norm((l * w_target - x_prev)[1:], 1)
 
