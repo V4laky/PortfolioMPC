@@ -10,8 +10,24 @@ def log_norm_params(mu, sig):
 
 def get_uncond_vol(market_garch, garch_scaling, shrink=0.9):
     p = market_garch.params
-    uncond_var = p['omega']/(1-p['alpha[1]']*shrink - p['beta[1]']*shrink) # shrink parameters since a+b close to 1
+
+    if 'gamma[1]' in p:
+        uncond_var = p['omega']/(1-p['alpha[1]']*shrink - p['beta[1]']*shrink - p['gamma[1]']*shrink/2)
+    else:
+        uncond_var = p['omega']/(1-p['alpha[1]']*shrink - p['beta[1]']*shrink) # shrink parameters since a+b close to 1
+
     return np.sqrt(uncond_var)/garch_scaling
+
+def transform_params(params, persistance, uncond_vol, garch_scaling):
+    p = params.copy()
+    pers = p['alpha[1]'] + p['beta[1]'] + p['gamma[1]']/2
+
+    scaling = persistance / pers
+
+    p['alpha[1]'], p['beta[1]'], p['gamma[1]'] = p['alpha[1]']*scaling, p['beta[1]']*scaling, p['gamma[1]']*scaling
+    p['omega'] = (uncond_vol * garch_scaling)**2 * (1 - persistance) # uncodnd vol remains same
+
+    return p
 
 
 # Market return around 0.00028
@@ -24,10 +40,13 @@ class Market():
         np.random.seed(42)
 
         self.market_model = market_model
+
         self.scale = market_scale_arch
 
         self.dynamic_beta = dynamic_beta
-        self.uncond_market_vol = get_uncond_vol(self.market_model, self.scale, 0.9)
+        self.uncond_market_vol = get_uncond_vol(self.market_model, self.scale, 1)
+
+        self.params = transform_params(self.market_model.params, 0.95, self.uncond_market_vol, self.scale)
 
         self.n_assets = n_assets
         self.n_sectors = n_sectors
@@ -55,7 +74,11 @@ class Market():
 
     def simulate(self, nobs, burn=500, initial_value=None, initial_vol=None):
 
-        r_m = self.market_model.model.simulate(nobs=nobs+1, params=self.market_model.params, burn=burn,
+        # NOTE: test scaling up initials to match garch, Possibly a really bad bug !!
+        initial_value = initial_value * self.scale if initial_value is not None else None
+        initial_vol = initial_vol * self.scale if initial_vol is not None else None
+
+        r_m = self.market_model.model.simulate(nobs=nobs+1, params=self.params, burn=burn,
                                                initial_value=initial_value, initial_value_vol=initial_vol)
         
         r_m = r_m.iloc[1:] / self.scale
@@ -68,8 +91,8 @@ class Market():
 
 
         if self.dynamic_beta:
-            scale = 1 + 0.1*(m_vol/self.uncond_market_vol - 1)
-            np.clip(scale, 1.0, 2.0) # lower 1.0 to not reduce betas
+            scale = 1 + 0.1*(m_vol / self.uncond_market_vol - 1)
+            scale = np.clip(scale, 1.0, 2.0) # lower 1.0 to not reduce betas
             
             betas = self.betas[:, None] @ (scale).to_numpy()[None, :]
             
