@@ -6,10 +6,15 @@ from src.Market import Market
 
 FREQ_COEFF = {'daily': 1, 'weekly': 5, 'monthly': 22}
 
-def make_scenario(nobs:int, freq:str, market:Market, burn:int, init_value:float|None=None, init_vol:float|None=None, 
-                  return_last:bool=False, linear:bool=True):
+def make_scenario(nobs:int, freq:str, market:Market, 
+                  return_last:bool=False, linear:bool=True, **market_kwargs):
 
-    r, r_m, m_vol = market.simulate(nobs*FREQ_COEFF[freq], burn, init_value, init_vol)
+    r, r_m, m_vol = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
+
+    if r_m is None:
+        r_m = pd.Series(np.zeros(r.shape[0]))
+    if m_vol is None:
+        m_vol = pd.Series(np.zeros(r.shape[0]))
     
     r = pd.DataFrame(r)
 
@@ -38,16 +43,18 @@ def make_scenario(nobs:int, freq:str, market:Market, burn:int, init_value:float|
             last_r_m = r_m.resample(rule).last()
             last_m_vol = m_vol.resample(rule).last()
 
+            lasts = r.resample(rule).last()
+
             return scenario.iloc[:nobs], market_return.iloc[:nobs],\
-                    last_r_m.iloc[:nobs], last_m_vol[:nobs]
+                    last_r_m.iloc[:nobs], last_m_vol.iloc[:nobs], lasts.iloc[:nobs]
     
     return scenario.iloc[:nobs]
 
-def generate_scenarios(K:int, T:int, N:int, freq:str, market:Market, burn:int, init_value:float|None=None, init_vol:float|None=None):
+def generate_scenarios(K:int, T:int, N:int, freq:str, market:Market, **market_kwargs):
     scenarios = np.zeros((K,T,N))
 
     for k in range(K):
-        scenarios[k] = make_scenario(T, freq, market, burn, init_value, init_vol)
+        scenarios[k] = make_scenario(T, freq, market, **market_kwargs)
 
     return scenarios
 

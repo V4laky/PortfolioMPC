@@ -20,11 +20,18 @@ def get_uncond_vol(market_garch, garch_scaling, shrink=0.9):
 
 def transform_params(params, persistance, uncond_vol, garch_scaling):
     p = params.copy()
-    pers = p['alpha[1]'] + p['beta[1]'] + p['gamma[1]']/2
+    
+    if 'gamma[1]' in p:
+        pers = p['alpha[1]'] + p['beta[1]'] + p['gamma[1]']/2
+    else:
+        pers = p['alpha[1]'] + p['beta[1]']
 
     scaling = persistance / pers
 
-    p['alpha[1]'], p['beta[1]'], p['gamma[1]'] = p['alpha[1]']*scaling, p['beta[1]']*scaling, p['gamma[1]']*scaling
+    if 'gamma[1]' in p:
+        p['alpha[1]'], p['beta[1]'], p['gamma[1]'] = p['alpha[1]']*scaling, p['beta[1]']*scaling, p['gamma[1]']*scaling
+    else:
+        p['alpha[1]'], p['beta[1]'] = p['alpha[1]']*scaling, p['beta[1]']*scaling
     p['omega'] = (uncond_vol * garch_scaling)**2 * (1 - persistance) # uncodnd vol remains same
 
     return p
