@@ -6,10 +6,18 @@ from src.Market import Market
 
 FREQ_COEFF = {'daily': 1, 'weekly': 5, 'monthly': 22}
 
-def make_scenario(nobs:int, freq:str, market:Market, 
+def make_scenario(nobs:int, freq:str, market:Market, return_full_daily:bool=False,
                   return_last:bool=False, linear:bool=True, **market_kwargs):
+    
+    if return_full_daily and return_last:
+        raise ValueError('Either return_full_daily or return_last must be False.')
+    
+    sectors = None
 
-    r, r_m, m_vol = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
+    try:
+        r, r_m, m_vol = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
+    except ValueError:
+        r, r_m, m_vol, sectors = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
 
     if r_m is None:
         r_m = pd.Series(np.zeros(r.shape[0]))
@@ -47,6 +55,11 @@ def make_scenario(nobs:int, freq:str, market:Market,
 
             return scenario.iloc[:nobs], market_return.iloc[:nobs],\
                     last_r_m.iloc[:nobs], last_m_vol.iloc[:nobs], lasts.iloc[:nobs]
+        
+        if return_full_daily:
+            market_return = r_m.resample(rule).sum()
+
+            return scenario, market_return, {'market': r_m, 'market_vol':m_vol, 'sectors': sectors}
     
     return scenario.iloc[:nobs]
 

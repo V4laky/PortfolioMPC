@@ -47,7 +47,7 @@ class Market():
 
         # Defince Sectors volatilities and AR coefficients (make it persistent)
         self.sector_AR_coeffs = np.random.uniform(0.2, 0.6, n_sectors)
-        self.sectors = np.random.randint(0, n_sectors, n_assets)
+        self.sectors = np.random.randint(0, n_sectors+1, n_assets)
 
         # trying to prevent huge coeffs by lowering std
         self.sector_vols = np.random.lognormal(*log_norm_params(0.00945, 0.002), n_sectors)
