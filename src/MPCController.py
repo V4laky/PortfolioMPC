@@ -1,18 +1,36 @@
 import cvxpy as cp
-
+import warnings
+import numpy as np
 
 class MPCController():
 
-    def __init__(self, K, T, N, risk_free, risk, trade=0.005, risk_type='variance'):
+    def __init__(self, K, T, N, risk_free, risk, trade=0.005, risk_type='variance', cvar_alpha=None):
 
-        risk_types = ('variance', 'semi_variance')
+        risk_types = ('variance', 'semi_variance', 'cvar')
         if risk_type not in risk_types:
             raise ValueError(f'risk type must be one of {risk_types}')
+
+        if risk_type == "cvar":
+            if cvar_alpha is None:
+                raise ValueError("cvar_alpha must be provided when using risk_type: cvar")
+            
+            tail_count = (1 - cvar_alpha) * K
+            if tail_count < 30:
+                    warnings.warn(
+                        f"CVaR_{cvar_alpha:.2f} uses only "
+                        f"{tail_count:.1f} tail scenarios. "
+                        "Results may be unstable. "
+                        "Consider increasing the number of scenarios."
+                    )
+
+        self.risk_type = risk_type
 
         # Parameters and Constants
 
         self.x0 = cp.Parameter(N+1, name='initial wealth')
         self.r = [cp.Parameter((K,N), name=f'returns_time_{t}') for t in range(T)]
+
+        self.scaled_risk = cp.Parameter(nonneg=True)
 
         self.risk_free = cp.Constant(risk_free, name='risk free rate')
 
@@ -64,15 +82,23 @@ class MPCController():
         constraints.append(self.z == cp.sum(final_wealth) / K)
         
         if risk_type == 'variance':
-            risk_measure = cp.var(self.z - final_wealth)
+            risk_measure = cp.var(final_wealth)
 
         if risk_type == 'semi_variance':
             self.downside = cp.Variable(K, nonneg=True)
             constraints += [self.downside >= self.z - final_wealth]
-            risk_measure = cp.var(self.downside)
+            risk_measure = cp.sum_squares(self.downside) / K
+        
+        if risk_type == "cvar":
+            self.tau = cp.Variable()
+            risk_measure = self.tau + 1/(1 - cvar_alpha) * cp.mean(cp.pos(-final_wealth -self.tau))
+
+        #variance_regularization = True
+        #if variance_regularization:
+        #    variance = cp.var(final_wealth)
 
         objective = cp.Maximize(
-            self.z - self.risk * risk_measure
+            self.z - self.scaled_risk * risk_measure
             )
 
         self.problem = cp.Problem(objective, constraints)
@@ -85,27 +111,64 @@ class MPCController():
             r_t.value = scenarios[:, t, :]
         
         self.x0.value = x0
-            
 
-    def solve(self):
-        self.problem.solve(
-            solver=cp.OSQP,
-            warm_start=True,
-            verbose=False,
-            polish=True,
-            eps_abs=1e-2,
-            eps_rel=1e-2,
-            rho=0.1,
-            max_iter=2000
-        )
+        if self.risk_type in ('variance', 'semi_variance'):
+            self.scaled_risk.value = self.risk.value / np.sum(x0)
+        else:
+            self.scaled_risk.value = self.risk.value
+
+
+    def solve(self, solver='OSQP'):
+
+        if solver == 'HIGHS':
+            self.problem.solve(solver=cp.HIGHS, verbose=False)
+
+        elif solver == 'CLARABEL':
+            self.problem.solve(
+                solver=cp.CLARABEL,
+                warm_start=True,
+                verbose=False,
+                max_iter=100,
+                tol_gap_abs=1e-3,
+                tol_gap_rel=1e-3,
+                tol_feas=1e-3,
+            )
+
+        elif solver == 'SCS':
+            self.problem.solve(
+                solver=cp.SCS,
+                warm_start=True,
+                eps=1e-3,
+                max_iters=3000,
+                acceleration_lookback=10,
+                verbose=False,
+            )
+
+
+        elif solver == 'OSQP':
+            self.problem.solve(
+                solver=cp.OSQP,
+                warm_start=True,
+                verbose=False,
+                polish=True,
+                eps_abs=1e-2,
+                eps_rel=1e-2,
+                rho=0.1,
+                max_iter=2000
+            )
+        
+        else:
+            raise ValueError("Invalid solver name.")
 
         if self.problem.status in [cp.INFEASIBLE, cp.INFEASIBLE_INACCURATE]:
             raise RuntimeError(f"Problem is {self.problem.status}")
         
+
         return {
             'objective': self.problem.value,
             'status': self.problem.status,
-            'solve_time': self.problem.solver_stats.solve_time
+            'solve_time': self.problem.solver_stats.solve_time,
+            'compilation_time': self.problem.compilation_time
         }
     
     def control(self):
