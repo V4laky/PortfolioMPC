@@ -1,4 +1,5 @@
 results/*
+datasets/*
 .venv
 src/__pycache__/
 .ipynb_checkpoints/

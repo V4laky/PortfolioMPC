@@ -151,10 +151,9 @@ class MPCController():
                 warm_start=True,
                 verbose=False,
                 polish=True,
-                eps_abs=1e-2,
-                eps_rel=1e-2,
-                rho=0.1,
-                max_iter=2000
+                eps_abs=1e-3,
+                eps_rel=1e-3,
+                max_iter=3000
             )
         
         else:

@@ -7,8 +7,11 @@ from src.Market import log_norm_params, get_uncond_vol, transform_params
 class Market():
     
     def __init__(self, n_assets, n_sectors, market_model, rf = 0.0001, market_scale_arch=1,
-                 random_seed=None, target_SNR=None):
+                 random_seed=None, target_SNR=None, base_w = np.array([0.4, 0.3, 0.2, 0.1])):
         
+        assert np.isclose(base_w.sum(), 1), "base_w must sum to 1."
+        assert (base_w >= 0).all(), "base_w must be non-negative."
+
         if target_SNR is not None:
             raise NotImplementedError("targer SNR is not implemented yet.")
 
@@ -34,7 +37,7 @@ class Market():
         self.rf = rf
 
         # Defince weights of varinance budget
-        self.base_w = np.array([0.4, 0.3, 0.2, 0.1])
+        self.base_w = base_w
 
         weights = self.base_w[None, :] + np.random.normal(0, 0.03, (n_assets, 4))
         weights = np.clip(weights, 0.01, None)
@@ -47,7 +50,7 @@ class Market():
 
         # Defince Sectors volatilities and AR coefficients (make it persistent)
         self.sector_AR_coeffs = np.random.uniform(0.2, 0.6, n_sectors)
-        self.sectors = np.random.randint(0, n_sectors+1, n_assets)
+        self.sectors = np.random.randint(0, n_sectors, n_assets)
 
         # trying to prevent huge coeffs by lowering std
         self.sector_vols = np.random.lognormal(*log_norm_params(0.00945, 0.002), n_sectors)
