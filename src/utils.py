@@ -7,18 +7,18 @@ from src.Market import Market
 FREQ_COEFF = {'daily': 1, 'weekly': 5, 'monthly': 22}
 
 def make_scenario(nobs:int, freq:str, market:Market, return_full_daily:bool=False,
-                  return_last:bool=False, linear:bool=True, **market_kwargs):
-    
-    if return_full_daily and return_last:
-        raise ValueError('Either return_full_daily or return_last must be False.')
+                    linear:bool=True, **market_kwargs):
+    """NOTE: linear applies only to scenarios."""
     
     sectors = None
 
-    try:
+    # Determine whether to return sectors
+    if 'return_sectors' in market_kwargs and market_kwargs['return_sectors']:
+            r, r_m, m_vol, sectors = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
+    else:
         r, r_m, m_vol = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
-    except ValueError:
-        r, r_m, m_vol, sectors = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
-
+        
+    # Handle empty r_m, m_vol
     if r_m is None:
         r_m = pd.Series(np.zeros(r.shape[0]))
     if m_vol is None:
@@ -32,35 +32,30 @@ def make_scenario(nobs:int, freq:str, market:Market, return_full_daily:bool=Fals
     ii = pd.date_range(start='2024-01-01', periods=len(r.index), freq='B')
     r.index, r_m.index, m_vol.index = ii, ii, ii
 
-    if linear:
-        r = np.exp(r) - 1
-        r_m = np.exp(r_m) - 1
-
     if freq == 'monthly':
         rule = 'ME'
     elif freq == 'weekly':
         rule = 'W-FRI'
 
-    if rule is not None: # TODO: Doesnt handle freq='daily'
+    # Make scenarios from log-returns.
+    if freq != 'daily':
         scenario = r.resample(rule).sum()
-            
-        if return_last:
-            # NOTE: We only need market when also returning last
-            market_return = r_m.resample(rule).sum()
-
-            last_r_m = r_m.resample(rule).last()
-            last_m_vol = m_vol.resample(rule).last()
-
-            lasts = r.resample(rule).last()
-
-            return scenario.iloc[:nobs], market_return.iloc[:nobs],\
-                    last_r_m.iloc[:nobs], last_m_vol.iloc[:nobs], lasts.iloc[:nobs]
-        
-        if return_full_daily:
-            market_return = r_m.resample(rule).sum()
-
-            return scenario, market_return, {'market': r_m, 'market_vol':m_vol, 'sectors': sectors}
+    else:
+        scenario = r
     
+    # Make scenarios linear AFTER making them
+    if linear:
+        scenario = np.exp(scenario) - 1
+    
+    # Handle more detailed return
+    if return_full_daily:
+        if freq != 'daily':
+            market_return = r_m.resample(rule).sum()
+        else:
+            market_return = r_m
+
+        return scenario, market_return, {'market': r_m, 'market_vol':m_vol, 'sectors': sectors}
+
     return scenario.iloc[:nobs]
 
 def generate_scenarios(K:int, T:int, N:int, freq:str, market:Market, **market_kwargs):
