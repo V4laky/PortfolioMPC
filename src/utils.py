@@ -9,7 +9,52 @@ FREQ_COEFF = {'daily': 1, 'weekly': 5, 'monthly': 22}
 def make_scenario(nobs:int, freq:str, market:Market, return_full_daily:bool=False,
                     linear:bool=True, **market_kwargs):
     """NOTE: linear applies only to scenarios."""
+        
+    sectors = None
+
+    # Determine whether to return sectors
+    if 'return_sectors' in market_kwargs and market_kwargs['return_sectors']:
+            r, r_m, m_vol, sectors = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
+    else:
+        r, r_m, m_vol = market.simulate(nobs*FREQ_COEFF[freq], **market_kwargs)
+        
+    # Handle empty r_m, m_vol
+    if r_m is None:
+        r_m = np.zeros(r.shape[0])
+    if m_vol is None:
+        m_vol = np.zeros(r.shape[0])
+
+    if freq not in ('daily', 'weekly', 'monthly'):
+        raise ValueError("Frequency must be one of 'daily', 'weekly', or 'monthly'")
+
+    # Make scenarios from log-returns.
+    if freq == 'daily':
+        scenario = r
+        market_return = r_m
+
+    else:
+        step = FREQ_COEFF[freq]
+        scenario = r.reshape(nobs, step, r.shape[1]).sum(axis=1)
     
+    # Make scenarios linear AFTER making them
+    if linear:
+        np.exp(scenario, out=scenario)
+        scenario -= 1
+    
+    # Handle more detailed return
+    if return_full_daily:
+        if freq != 'daily':
+            market_return = r_m.reshape(nobs, step).sum(axis=1)
+
+        return scenario, market_return, {'market': r_m, 'market_vol':m_vol, 'sectors': sectors}
+
+    return scenario
+
+
+def make_scenario_old(nobs:int, freq:str, market:Market, return_full_daily:bool=False,
+                    linear:bool=True, **market_kwargs):
+    """NOTE: linear applies only to scenarios."""
+
     sectors = None
 
     # Determine whether to return sectors
@@ -30,6 +75,7 @@ def make_scenario(nobs:int, freq:str, market:Market, return_full_daily:bool=Fals
         raise ValueError("Frequency must be one of 'daily', 'weekly', or 'monthly'")
     
     ii = pd.date_range(start='2024-01-01', periods=len(r.index), freq='B')
+    r, r_m, m_vol = pd.DataFrame(r), pd.Series(r_m), pd.Series(m_vol)
     r.index, r_m.index, m_vol.index = ii, ii, ii
 
     if freq == 'monthly':

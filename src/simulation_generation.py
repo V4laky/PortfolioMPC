@@ -22,12 +22,12 @@ def generate_dataset(n_simulations, n_steps, freq, market, K,T,N, outputdir):
                               return_full_daily=True, return_sectors=True)
 
             # first were generated for context - leave one extra for previous index
-            actual_traj = actual_traj.iloc[-(n_steps+1):] 
-            market_return = market_return.iloc[-(n_steps+1):]
+            actual_traj = actual_traj[-n_steps:]
+            market_return = market_return[-n_steps:]
 
-            # reindex and transpose sectors
-            full_date_index = context['market'].index
-            context['sectors'] = pd.DataFrame(context['sectors'].T, index=full_date_index)
+            context['market'] = context['market'][ - (n_steps*FREQ_COEFF[freq] + MAGIC_NUMBER):]
+            context['market_vol'] = context['market_vol'][ - (n_steps*FREQ_COEFF[freq] + MAGIC_NUMBER):]
+            context['sectors'] = context['sectors'][ - (n_steps*FREQ_COEFF[freq] + MAGIC_NUMBER):]
 
             sim_data = {
                 'actual_traj': actual_traj,

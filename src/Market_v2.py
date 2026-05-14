@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 
 from src.Market import log_norm_params, get_uncond_vol, transform_params
+from src.optimized_functions import ewma_1d, ewma_2d, simulate_gjr_garch
+
+def map_params(params):
+    param_names = ['mu', 'phi', 'omega', 'alpha', 'gamma', 'beta']
+    
+    return {k:v for k,v in zip(param_names, params.values[:len(param_names)])}
 
 
 class Market():
@@ -20,16 +26,17 @@ class Market():
         self.market_model = market_model
         self.scale = market_scale_arch
         self.uncond_vol = get_uncond_vol(self.market_model, self.scale, 1)
-        self.params = transform_params(market_model.params, 0.85, self.uncond_vol, self.scale)
+        params = transform_params(market_model.params, 0.85, self.uncond_vol, self.scale)
+        self.params = map_params(params)
 
         # estimate paramters
-        r_m = self.market_model.model.simulate(nobs=20000, params=self.params)
-        self.mean_vol = r_m['volatility'].mean() / self.scale
-        self.vol_of_vol = (r_m['volatility'] / self.scale).std()
+        r_m, m_vol = simulate_gjr_garch(nobs=20000, burn=500, **self.params, z=np.random.standard_normal(20000 + 500))
+        self.mean_vol = m_vol.mean() / self.scale
+        self.vol_of_vol = (m_vol / self.scale).std()
 
-        smooth_vol = self._calc_smooth_factor(r_m['volatility'] / self.scale, 'ewm', 20)
+        smooth_vol = ewma_1d(m_vol / self.scale, 20)
 
-        self.excess_vol_std = ((r_m['volatility'].iloc[20:] / self.scale) - smooth_vol).std()
+        self.excess_vol_std = ((m_vol[21:] / self.scale) - smooth_vol[21:]).std()
 
 
         self.n_assets = n_assets
@@ -82,7 +89,6 @@ class Market():
 
         # placeholder
         roll = [20, 20, 20] # market - vol - sector
-        roll_type = ['ewm', "ewm", 'ewm']
         extra_gen = max(roll)-1 # generate extra for rolling
 
         # check shapes
@@ -92,17 +98,21 @@ class Market():
         if initial_market_vols is not None:
             assert initial_market_vols.size == roll[1], f"initial_market_vols.size must be {roll[1]}"
         if initial_sector_returns is not None:
-            assert initial_sector_returns.shape == (roll[2], self.n_sectors), f"initial_sector_returns.shape must be {(roll[2], self.n_sectors)}"
+            assert initial_sector_returns.shape == (roll[2], self.n_sectors), f"initial_sector_returns.shape must be \
+            {(roll[2], self.n_sectors)}, but its {initial_sector_returns.shape}"
 
         # Market returns, and vols
-        initial_value = initial_market_returns.iloc[-1] * self.scale if initial_market_returns is not None else None
-        initial_vol = initial_market_vols.iloc[-1] * self.scale if initial_market_vols is not None else None
+        initial_value = initial_market_returns[-1] * self.scale if initial_market_returns is not None else 0.0
+        initial_vol = initial_market_vols[-1] * self.scale if initial_market_vols is not None else None
 
-        r_m = self.market_model.model.simulate(nobs=nobs+1+extra_gen, params=self.params, burn=burn,
-                                                    initial_value=initial_value, initial_value_vol=initial_vol)
-                
-        r_m = r_m.iloc[1:] / self.scale
-        r_m, m_vol = r_m['data'], r_m['volatility']
+        #r_m = self.market_model.model.simulate(nobs=nobs+1+extra_gen, params=self.params, burn=burn,
+        #                                            initial_value=initial_value, initial_value_vol=initial_vol)
+
+        z = np.random.standard_normal(nobs+1+extra_gen + burn)
+        r_m, m_vol = simulate_gjr_garch(nobs+1+extra_gen, burn, **self.params, z=z,
+                                        initial_return=initial_value, initial_vol=initial_vol)
+        
+        r_m, m_vol = r_m / self.scale, m_vol / self.scale 
 
         #m_vol -= self.mean_vol # center volatility so its not > 0
         # NOTE:tryinf m_vol - rolling mean(m_vol)
@@ -110,38 +120,37 @@ class Market():
         # Sectors
 
         if initial_sector_returns is None:
-            sector_returns = self._simulate_sector(nobs+(roll[2]-1), initial_sector_returns).T
+            sector_returns = self._simulate_sector(nobs+(roll[2]-1), initial_sector_returns)
         else:
-            sector_returns = self._simulate_sector(nobs, initial_sector_returns).T
+            sector_returns = self._simulate_sector(nobs, initial_sector_returns)
 
         # concat with initials if not None
         if initial_market_returns is not None:
-            r_m = pd.concat([initial_market_returns, r_m])
+            r_m = np.concatenate([initial_market_returns, r_m])
         if initial_market_vols is not None:
-            m_vol = pd.concat([initial_market_vols, m_vol])
+            m_vol = np.concatenate([initial_market_vols, m_vol])
         if initial_sector_returns is not None:
-            sector_returns = np.hstack([initial_sector_returns.T, sector_returns])
-        
+            sector_returns = np.vstack([initial_sector_returns, sector_returns]) # shape (T+roll, n_sectors)
 
         # smooth factors
-        market_factor = self._calc_smooth_factor(pd.Series(r_m), roll_type[0], roll[0])
-        market_vol_factor = self._calc_smooth_factor(pd.Series(m_vol), roll_type[1], roll[1])
-        sector_factor = self._calc_smooth_factor(pd.DataFrame(sector_returns.T), roll_type[2], roll[2])
+        market_factor = ewma_1d(r_m, roll[0])
+        market_vol_factor = ewma_1d(m_vol, roll[1])
+        sector_factor = ewma_2d(sector_returns, roll[2])
 
         # Use the fact that the last one is always time T, so use last nobs
-        market_factor = market_factor.iloc[-nobs:]
-        market_vol_factor = m_vol[-nobs:] - market_vol_factor.iloc[-nobs:] # excess vol from recent
-        sector_factor = sector_factor.iloc[-nobs:]
+        market_factor = market_factor[-nobs:]
+        market_vol_factor = m_vol[-nobs:] - market_vol_factor[-nobs:] # excess vol from recent
+        sector_factor = sector_factor[-nobs:, :]
 
-        # construct returns
-        returns = self.alphas[:, None] + self.betas[:, None] @ (market_factor.to_numpy()[None, :] - self.rf) + self.rf
-        returns += self.vol_premia[:, None] @ market_vol_factor.to_numpy()[None, :]
-        returns += (sector_factor.T).iloc[self.sectors] * self.sector_coeffs[:, None]
-        returns += np.random.standard_normal((self.n_assets, nobs)) * self.idio_vol[:, None]
+        # construct returns (T, n_assets)
+        returns = self.alphas[None, :] + self.betas[None, :] * (market_factor[:, None] - self.rf) + self.rf
+        returns += self.vol_premia[None, :] * market_vol_factor[:, None]
+        returns += sector_factor[:, self.sectors] * self.sector_coeffs
+        returns += np.random.standard_normal((nobs, self.n_assets)) * self.idio_vol
 
         if return_sectors:
-            return returns.T, r_m.iloc[-nobs:], m_vol.iloc[-nobs:], sector_returns[:, -nobs:]
-        return returns.T, r_m.iloc[-nobs:], m_vol.iloc[-nobs:]
+            return returns, r_m[-nobs:], m_vol[-nobs:], sector_returns[-nobs: , :]
+        return returns, r_m[-nobs:], m_vol[-nobs:]
 
     def _simulate_sector(self, nobs, initial_sector_returns=None):
         

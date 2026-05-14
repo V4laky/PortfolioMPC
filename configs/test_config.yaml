@@ -1,21 +1,22 @@
 
-market_path : datasets/trial_3asset20idio/market.joblib
-dataset_path : datasets/trial_3asset20idio
+market_path : datasets/test/market.joblib
+dataset_path : datasets/test
 save_path : results/test
-name : 'MPC_3asset_20idio'
+name : 'semi_var_test'
 
 N : 20 # n_assets - does nothing, its inferred from market
 T : 5 # n_timeperiods - the amount the model sees ahead
 K : 100 # n_scenarios
 
 n_steps : 52
-n_simulations : 2
+n_simulations : 50
 
 trade_cost : 0.001 # 5bps - 20bps
 
 freq : weekly # Shouldn't have a mismatch with dataset's freq
 
-risk_type : "variance"
+risk_type : "semi_variance"
+risk : 0.5
 cvar_alpha : 0.90
 
 

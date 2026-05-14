@@ -13,7 +13,7 @@ import yaml
 
 from src.MPCController import MPCController
 from src.simulation_generation import generate_dataset, load_simulation
-from src.utils import make_scenario, generate_scenarios
+from src.utils import make_scenario, generate_scenarios, FREQ_COEFF
 
 MAGIC_NUMBER = 20
 
@@ -56,8 +56,9 @@ def main():
     n_simulations = config['n_simulations'] # Maybe a startfrom could be nice later?
 
     trade_cost = config['trade_cost'] # 5bps - 20bps
+    risk = config['risk']
 
-    controller = MPCController(K, T, N, risk_free=rf, risk=0.5, trade=trade_cost, 
+    controller = MPCController(K, T, N, risk_free=rf, risk=risk, trade=trade_cost, 
                                risk_type=config['risk_type'], cvar_alpha=config['cvar_alpha'])
 
     # MPC simulation
@@ -76,30 +77,24 @@ def main():
         for i in tqdm(range(n_simulations), desc='Simulations'):
 
             actual_traj, market_return, context = load_simulation(dataset_path, i)
-            full_date_index = context['market'].index
 
             MPC_sim = [x_init]
             MPC_trade = []
 
             for step in tqdm(range(n_steps), desc=f'simulation {i+1}', leave=False):
 
-                next_date = actual_traj.index[step+1]
-                current_date = actual_traj.index[step]
-
-                current_loc = full_date_index.get_loc(current_date)
-
-                start, end = full_date_index[current_loc - MAGIC_NUMBER + 1], full_date_index[current_loc] # loc is exclusive
+                start = step * FREQ_COEFF[freq]
 
                 scenarios = generate_scenarios(K ,T, N, freq, market, burn=0,
-                                            initial_market_returns=context['market'].loc[start:end],
-                                            initial_market_vols=context['market_vol'].loc[start:end], 
-                                            initial_sector_returns=context['sectors'].loc[start:end].to_numpy())
+                                            initial_market_returns=context['market'][start:start+MAGIC_NUMBER],
+                                            initial_market_vols=context['market_vol'][start:start+MAGIC_NUMBER], 
+                                            initial_sector_returns=context['sectors'][start:start+MAGIC_NUMBER, :])
                 
                 controller.update_parameters(scenarios, MPC_sim[-1])
-                stats = controller.solve(solver='SCS')
+                stats = controller.solve(solver='OSQP')
                 u0 = controller.control()
 
-                x_next = (MPC_sim[-1] + u0) * np.hstack([1+rf, 1+actual_traj.loc[next_date]])
+                x_next = (MPC_sim[-1] + u0) * np.hstack([1+rf, 1+actual_traj[step]])
 
                 MPC_sim.append(x_next)
                 MPC_trade.append(u0)
