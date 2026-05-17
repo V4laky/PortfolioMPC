@@ -5,9 +5,17 @@ from src.Market import log_norm_params, get_uncond_vol, transform_params
 from src.optimized_functions import ewma_1d, ewma_2d, simulate_gjr_garch
 
 def map_params(params):
-    param_names = ['mu', 'phi', 'omega', 'alpha', 'gamma', 'beta']
-    
-    return {k:v for k,v in zip(param_names, params.values[:len(param_names)])}
+    if "gamma[1]" in params:
+        param_names = ['mu', 'phi', 'omega', 'alpha', 'gamma', 'beta']
+        
+        return {k:v for k,v in zip(param_names, params.values[:len(param_names)])}
+    else:
+        # assume its not GJR but normal garch
+        param_names = ['mu', 'phi', 'omega', 'alpha', 'beta']
+
+        dd = {k:v for k,v in zip(param_names, params.values[:len(param_names)])}
+        dd['gamma'] = 0 # since we expect it to be given
+        return dd
 
 
 class Market():
@@ -22,6 +30,14 @@ class Market():
             raise NotImplementedError("targer SNR is not implemented yet.")
 
         np.random.seed(random_seed)
+            # market, vol_prem, sector
+        self.roll = [20, 20, 20] # Later can make it more customizable, but for now just use 20 for all
+
+        self.n_assets = n_assets
+        self.n_sectors = n_sectors
+        self.rf = rf
+
+        # long simulation for paramter estimation
 
         self.market_model = market_model
         self.scale = market_scale_arch
@@ -31,17 +47,14 @@ class Market():
 
         # estimate paramters
         r_m, m_vol = simulate_gjr_garch(nobs=20000, burn=500, **self.params, z=np.random.standard_normal(20000 + 500))
-        self.mean_vol = m_vol.mean() / self.scale
+        #self.mean_vol = m_vol.mean() / self.scale
         self.vol_of_vol = (m_vol / self.scale).std()
 
-        smooth_vol = ewma_1d(m_vol / self.scale, 20)
+        self.market_factor_vol = ewma_1d(r_m / self.scale, self.roll[0])[(self.roll[0]+1):].std() # Now for the smooth market
 
-        self.excess_vol_std = ((m_vol[21:] / self.scale) - smooth_vol[21:]).std()
+        smooth_vol = ewma_1d(m_vol / self.scale, self.roll[1])
 
-
-        self.n_assets = n_assets
-        self.n_sectors = n_sectors
-        self.rf = rf
+        self.excess_vol_std = ((m_vol[(self.roll[1] + 1):] / self.scale) - smooth_vol[(self.roll[1] + 1):]).std()
 
         # Defince weights of varinance budget
         self.base_w = base_w
@@ -62,10 +75,14 @@ class Market():
         # trying to prevent huge coeffs by lowering std
         self.sector_vols = np.random.lognormal(*log_norm_params(0.00945, 0.002), n_sectors)
         
+        # calculate smooth sector factor volatitily
+        sim_sector = self._simulate_sector(20000 + self.roll[2] - 1)
+        self.smooth_sector_vols = ewma_2d(sim_sector, self.roll[2])[(self.roll[2] + 1):, :].std(axis=0)
+
         # Calculate factor coefficients
-        self.betas = self.vols / self.mean_vol * np.sqrt(self.weights[:, 0]) # market
+        self.betas = self.vols / self.market_factor_vol * np.sqrt(self.weights[:, 0]) # market
         self.vol_premia = self.vols / self.excess_vol_std * np.sqrt(self.weights[:, 1]) # vol premia
-        self.sector_coeffs = self.vols / self.sector_vols[self.sectors] * np.sqrt(self.weights[:, 2])
+        self.sector_coeffs = self.vols / self.smooth_sector_vols[self.sectors] * np.sqrt(self.weights[:, 2])
 
         self.vol_premia *= np.random.choice([-1, 1], n_assets) # Some assets react negatively to volatility
 
@@ -88,7 +105,7 @@ class Market():
                  return_sectors=False):
 
         # placeholder
-        roll = [20, 20, 20] # market - vol - sector
+        roll = self.roll # market - vol - sector
         extra_gen = max(roll)-1 # generate extra for rolling
 
         # check shapes
