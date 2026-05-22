@@ -40,7 +40,7 @@ class MPCController():
         # Variables
 
         self.u = cp.Variable((T, N+1))
-        self.x = [cp.Variable((K, N+1), nonneg = True) for _ in range(T)]  # scenario number, time, ith asset - and no shorting
+        self.x = [cp.Variable((K, N+1), nonneg = True) for _ in range(T+1)]  # scenario number, time, ith asset - and no shorting
 
         # AUX variables
         self.z = cp.Variable() # expected final wealth
@@ -55,7 +55,7 @@ class MPCController():
 
         constraints.append(self.pos - self.neg == self.u)
 
-        for t in range(T-1):
+        for t in range(T):
 
             #if t > 0:
             #    constraints.append(
@@ -77,7 +77,7 @@ class MPCController():
             )
 
 
-        final_wealth = cp.sum(self.x[T-1], axis=1)  # shape (K,)
+        final_wealth = cp.sum(self.x[T], axis=1)  # shape (K,)
 
         constraints.append(self.z == cp.sum(final_wealth) / K)
         

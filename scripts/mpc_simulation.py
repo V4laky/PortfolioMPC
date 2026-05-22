@@ -74,14 +74,14 @@ def main():
         MPC_sims = np.zeros((n_simulations, n_steps+1, N+1)) # + initial value
         MPC_trades = np.zeros((n_simulations, n_steps, N+1))
 
-        for i in tqdm(range(n_simulations), desc='Simulations'):
+        for i in tqdm(range(n_simulations), desc='Simulations', position=0):
 
             actual_traj, market_return, context = load_simulation(dataset_path, i)
 
             MPC_sim = [x_init]
             MPC_trade = []
 
-            for step in tqdm(range(n_steps), desc=f'simulation {i+1}', leave=False):
+            for step in tqdm(range(n_steps), desc=f'simulation {i+1}', leave=False, position=1):
 
                 start = step * FREQ_COEFF[freq]
 

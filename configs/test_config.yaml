@@ -1,14 +1,14 @@
 
-market_path : datasets/test/market.joblib
+market_path : results/market_simulation_normal_garch_norm.joblib
 dataset_path : datasets/test
 save_path : results/test
 name : 'semi_var_test'
 
-N : 20 # n_assets - does nothing, its inferred from market
-T : 5 # n_timeperiods - the amount the model sees ahead
+N : 10 # n_assets - does nothing, its inferred from market
+T : 4 # n_timeperiods - the amount the model sees ahead
 K : 100 # n_scenarios
 
-n_steps : 52
+n_steps : 20
 n_simulations : 50
 
 trade_cost : 0.001 # 5bps - 20bps
