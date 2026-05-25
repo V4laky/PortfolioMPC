@@ -55,18 +55,28 @@ Then open `notebooks/results.ipynb` to visualize:
 - Allocation over time
 - Risk metrics
 
-### Workflow D: Test Market Simulation
+### Workflow D: Explore Analysis Results
 
 ```bash
 jupyter notebook
 ```
 
-Open `notebooks/MarketSim_tests.ipynb` to:
-- Verify market dynamics
-- Check return distributions
-- Validate factor exposures
+Open either:
+- `notebooks/results.ipynb` - Main analysis and visualization
+- `notebooks/Trajectory_analysis.ipynb` - Detailed trajectory analysis
 
-### Workflow E: Modify Simulation Parameters
+### Workflow E: Learn How to Create Market Instance
+
+```bash
+jupyter notebook
+```
+
+Open `notebooks/MarketSim_tests.ipynb` to see:
+- Example of instantiating a Market class
+- Understanding Market_v2 parameters
+- Note: Requires a pre-trained GARCH model
+
+### Workflow F: Modify Simulation Parameters
 
 1. Edit `configs/test_config.yaml`:
    ```yaml

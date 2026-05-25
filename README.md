@@ -13,8 +13,8 @@ This project implements:
 
 ```
 ├── src/
-│   ├── Market.py              # Base market model implementation
-│   ├── Market_v2.py           # Updated market model with improved dynamics
+│   ├── Market.py              # Deprecated - use Market_v2.py instead
+│   ├── Market_v2.py           # Primary market model (factor-based with GARCH)
 │   ├── MPCController.py       # Model predictive control for portfolio management
 │   ├── portfolio_analysis.py  # Portfolio analysis utilities
 │   ├── simulation_generation.py# Dataset generation from market simulations
@@ -24,11 +24,11 @@ This project implements:
 │   ├── generate_dataset.py    # Generate simulation datasets
 │   └── mpc_simulation.py      # Run MPC simulations on datasets
 ├── notebooks/
-│   ├── MarketSim_tests.ipynb  # Market simulation tests
-│   ├── factors_v2.ipynb       # Factor model analysis
-│   ├── convex_opt.ipynb       # Optimization testing
-│   ├── Trajectory_analysis.ipynb # Analysis of simulation trajectories
-│   └── results.ipynb          # Results visualization
+│   ├── results.ipynb          # Main results analysis and visualization
+│   ├── Trajectory_analysis.ipynb # Portfolio trajectory and performance analysis
+│   ├── MarketSim_tests.ipynb  # Example: Creating Market class instances
+│   ├── factors_v2.ipynb       # (Deprecated - no longer maintained)
+│   └── convex_opt.ipynb       # (Deprecated - old version, use scripts instead)
 ├── configs/
 │   └── test_config.yaml       # Configuration for MPC simulation
 ├── datasets/
@@ -122,10 +122,9 @@ jupyter notebook
 ```
 
 Key notebooks:
-- `notebooks/MarketSim_tests.ipynb` - Test and validate market simulations
-- `notebooks/factors_v2.ipynb` - Analyze factor model components
-- `notebooks/results.ipynb` - Visualize MPC optimization results
-- `notebooks/Trajectory_analysis.ipynb` - Analyze portfolio trajectories
+- `notebooks/results.ipynb` - Main analysis: visualize MPC optimization results
+- `notebooks/Trajectory_analysis.ipynb` - Analyze portfolio trajectories and performance
+- `notebooks/MarketSim_tests.ipynb` - Example of how to create a Market class instance (requires GARCH model)
 
 ## Dependencies
 
@@ -142,8 +141,8 @@ Core dependencies (see `requirements.txt`):
 ## Key Classes and Functions
 
 ### Market Models
-- `Market` (Market.py): Base factor-based market model
-- `Market` (Market_v2.py): Enhanced market model with improved dynamics
+- `Market` (Market_v2.py): Primary factor-based market model with GARCH dynamics
+- `Market` (Market.py): Deprecated - use Market_v2.py instead
 
 ### Optimization
 - `MPCController`: Model predictive control for portfolio allocation
@@ -215,6 +214,13 @@ market_path : C:/Users/lovas/Desktop/Szakdoga/code/results/...
 ```
 
 
+
+## ⚠️ Deprecated Files - Do Not Use
+
+The following files are no longer maintained:
+- **Market.py** - Deprecated. Use `Market_v2.py` instead
+- **convex_opt.ipynb** - Old version. Use `scripts/mpc_simulation.py` instead
+- **factors_v2.ipynb** - No longer maintained
 
 ## Notes
 

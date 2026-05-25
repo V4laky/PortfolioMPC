@@ -250,10 +250,11 @@ If all three complete without errors, your setup is ready!
 ## Next Steps
 
 1. **Review the README.md** for project overview and usage
-2. **Explore notebooks**: Start with `notebooks/MarketSim_tests.ipynb`
-3. **Modify configs/test_config.yaml** to customize simulations
-4. **Generate your own datasets** with `scripts/generate_dataset.py`
-5. **Run MPC simulations** with `scripts/mpc_simulation.py`
+2. **Run an MPC simulation** with `scripts/mpc_simulation.py --config configs/test_config.yaml`
+3. **Explore results**: Open `notebooks/results.ipynb` to visualize output
+4. **Analyze trajectories**: See `notebooks/Trajectory_analysis.ipynb` for detailed analysis
+5. **Modify configs/test_config.yaml** to customize simulations
+6. **Generate new datasets** with `scripts/generate_dataset.py` if needed
 
 ---
 

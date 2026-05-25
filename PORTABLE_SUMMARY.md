@@ -8,7 +8,7 @@ This document summarizes the changes made to make your repository usable by othe
 - **README.md** - Now comprehensive with project overview, installation, usage, and troubleshooting
 - **SETUP.md** - Platform-specific setup instructions for Windows (PowerShell & CMD), macOS, and Linux
 - **QUICKSTART.md** - Quick start guide with 5 common workflows and troubleshooting
-- **CONTRIBUTING.md** - Developer guide for collaborators
+
 
 ### 2. ✅ Project Configuration
 - **Enhanced .gitignore** - Now covers comprehensive Python patterns, IDE files, OS files, testing artifacts
@@ -28,13 +28,13 @@ code/
 ├── README.md                      # Main documentation (NEW)
 ├── SETUP.md                       # Setup instructions (NEW)
 ├── QUICKSTART.md                  # Quick start guide (NEW)
-├── CONTRIBUTING.md                # Developer guide (NEW)
+
 ├── .gitignore                     # Enhanced (UPDATED)
 ├── requirements.txt               # (unchanged)
 ├── configs/
 │   └── test_config.yaml
 ├── src/
-│   ├── Market.py
+│   ├── Market.py              # Deprecated - use Market_v2.py
 │   ├── Market_v2.py
 │   ├── MPCController.py
 │   ├── etc...
@@ -53,13 +53,9 @@ code/
 1. **Clone/Download the repository**
 2. **Follow [SETUP.md](SETUP.md)** - Choose their OS and follow exact steps
 3. **Run [QUICKSTART.md](QUICKSTART.md)** - Follow a workflow
-4. **Explore** - Check README.md for details
+4. **Explore** - Check [README.md](README.md) for details and important info
 
-### For Collaborators
 
-1. Follow SETUP.md
-2. Read [CONTRIBUTING.md](CONTRIBUTING.md)
-3. Make changes with guidance on path handling, code style, etc.
 
 ## Key Improvements
 
@@ -128,10 +124,9 @@ Someone can now:
 
 | File | Purpose | For Whom |
 |------|---------|----------|
-| README.md | Project overview, features, usage | Everyone |
+| README.md | Project overview, features, usage, important info | Everyone |
 | SETUP.md | Installation instructions | New users |
 | QUICKSTART.md | 5-minute workflows | Users wanting to run code fast |
-| CONTRIBUTING.md | Development guidelines | Collaborators |
 | configs/test_config.yaml | Runtime configuration | Users customizing simulations |
 
 ## What They'll See Now
@@ -143,7 +138,7 @@ README.md ← Start here!
 ├─ Overview of project
 ├─ Installation link → SETUP.md
 ├─ Usage examples → QUICKSTART.md
-├─ For developers → CONTRIBUTING.md
+└─ Important info (deprecated files, path handling)
 ```
 
 ## No More "This Only Works on My PC"

@@ -9,7 +9,6 @@ Welcome! Here's where to find what you need:
 | **Never seen this project?** | [README.md](README.md) | 5 min |
 | **Ready to install?** | [SETUP.md](SETUP.md) | 10 min |
 | **Want to run code now?** | [QUICKSTART.md](QUICKSTART.md) | 5 min |
-| **Contributing code?** | [CONTRIBUTING.md](CONTRIBUTING.md) | 15 min |
 
 ## 📖 Full Documentation Tree
 
@@ -35,13 +34,9 @@ RUN CODE → QUICKSTART.md
            ├─ Output file descriptions
            └─ Quick troubleshooting
 
-DEVELOP → CONTRIBUTING.md
-          ├─ Code style guide
-          ├─ Path handling rules
-          ├─ Git workflow
-          ├─ Testing procedures
-          ├─ Common tasks
-          └─ Debug tips
+MODIFY CODE → See README.md
+          ├─ Deprecated files section
+          └─ Path handling guidelines
 
 DEEP DIVE → config_files/
             notebooks/
@@ -64,7 +59,7 @@ A: Check "Troubleshooting" section in [SETUP.md](SETUP.md)
 A: See "Configuration Parameters Explained" in [QUICKSTART.md](QUICKSTART.md)
 
 **Q: I want to modify the code**
-A: Read [CONTRIBUTING.md](CONTRIBUTING.md) first
+A: Check "Deprecated Files" and "Path Handling" sections in [README.md](README.md)
 
 **Q: What does this project do?**
 A: Check "Project Overview" in [README.md](README.md)
@@ -89,11 +84,6 @@ QUICKSTART.md
 └─ WHAT: How do I run this?
    WHEN: Read when you want to use code
    WHO: Users wanting quick results
-
-CONTRIBUTING.md
-└─ WHAT: How do I contribute/develop?
-   WHEN: Read before making changes
-   WHO: Developers and collaborators
 ```
 
 ## 🎯 Recommended Reading Order
@@ -106,12 +96,12 @@ CONTRIBUTING.md
 4. notebooks/results.ipynb - Explore results
 ```
 
-### If You Want to Understand & Develop
+### If You Want to Understand the Code
 ```
-1. README.md (5 min) - Project overview
+1. README.md (5 min) - Project overview and key info
 2. SETUP.md (10 min) - Install
-3. CONTRIBUTING.md (15 min) - Development guide
-4. notebooks/MarketSim_tests.ipynb - Understand models
+3. notebooks/results.ipynb - Main analysis and visualization
+4. notebooks/Trajectory_analysis.ipynb - Detailed trajectory analysis
 5. src/ files - Study implementation
 ```
 
@@ -129,10 +119,9 @@ CONTRIBUTING.md
 | Install steps | SETUP.md | Platform-specific section |
 | Run simulations | QUICKSTART.md | "Common Workflows" |
 | Configuration | QUICKSTART.md | "Configuration Parameters Explained" |
-| Code style | CONTRIBUTING.md | "Code Style and Standards" |
-| Path handling | CONTRIBUTING.md | "Path Handling" |
-| Git workflow | CONTRIBUTING.md | "Git Workflow" |
-| Project structure | README.md | "Project Structure" |
+| Code organization | README.md | "Project Structure" |
+| Path handling | README.md | "Path Handling (IMPORTANT)" |
+| Deprecated files | README.md | "Deprecated Files - Do Not Use" |
 | Classes/functions | README.md | "Key Classes and Functions" |
 
 ## 🆘 If You Get Stuck
@@ -140,7 +129,7 @@ CONTRIBUTING.md
 1. **Error message?** → Search [SETUP.md](SETUP.md#common-issues-and-solutions) "Troubleshooting"
 2. **How to run something?** → Check [QUICKSTART.md](QUICKSTART.md#2-common-workflows)
 3. **Configuration help?** → See [QUICKSTART.md](QUICKSTART.md#3-configuration-parameters-explained)
-4. **Development question?** → Read [CONTRIBUTING.md](CONTRIBUTING.md)
+4. **Code question?** → Check [README.md](README.md) Deprecated Files and Path Handling sections
 5. **Still stuck?** → Review [README.md](README.md#troubleshooting)
 
 ## 📱 Mobile Users
@@ -158,9 +147,9 @@ These docs are formatted for easy reading on all devices:
 README.md → SETUP.md → QUICKSTART.md → Done! 🎉
 ```
 
-**Path 2: Contributor** (Want to help develop)
+**Path 2: Code Review** (Understanding the code)
 ```
-README.md → SETUP.md → CONTRIBUTING.md → Code 💻
+README.md → SETUP.md → src/ files → notebooks/ 💻
 ```
 
 **Path 3: Researcher** (Want to understand models)
@@ -171,12 +160,12 @@ README.md → Notebooks → src/ files → Research 🔬
 ## 📝 Documentation Map
 
 ```
-PUBLIC DOCS          INTERNAL DOCS           CODE
-├─ README.md         ├─ CONTRIBUTING.md      ├─ src/
-├─ SETUP.md          ├─ test_config.yaml     ├─ scripts/
-├─ QUICKSTART.md     ├─ Notebooks            └─ configs/
-└─ INDEX.md ← YOU    └─ Results
-   (this file)
+PUBLIC DOCS          CODE & CONFIG
+├─ README.md         ├─ src/
+├─ SETUP.md          ├─ scripts/
+├─ QUICKSTART.md     ├─ configs/
+└─ INDEX.md ← YOU    ├─ notebooks/
+   (this file)       └─ Results
 ```
 
 ## 🔗 Quick Links
@@ -184,7 +173,7 @@ PUBLIC DOCS          INTERNAL DOCS           CODE
 - **Project Overview** → [README.md](README.md)
 - **Installation** → [SETUP.md](SETUP.md)
 - **Usage Examples** → [QUICKSTART.md](QUICKSTART.md)
-- **Development** → [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Deprecated Files** → [README.md](README.md#-deprecated-files---do-not-use)
 - **See Changes** → [PORTABLE_SUMMARY.md](PORTABLE_SUMMARY.md)
 
 ---
