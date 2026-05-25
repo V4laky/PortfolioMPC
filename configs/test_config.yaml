@@ -2,7 +2,7 @@
 market_path : results/market_simulation_normal_garch_norm.joblib
 dataset_path : datasets/test
 save_path : results/test
-name : 'semi_var_test'
+name : 'main_test_var99'
 
 N : 10 # n_assets - does nothing, its inferred from market
 T : 4 # n_timeperiods - the amount the model sees ahead
@@ -15,8 +15,14 @@ trade_cost : 0.001 # 5bps - 20bps
 
 freq : weekly # Shouldn't have a mismatch with dataset's freq
 
-risk_type : "semi_variance"
+risk_type : "variance"
 risk : 0.5
-cvar_alpha : 0.90
+cvar_alpha : 0.90 # ignored if risk_type is not cvar
+
+return_VAR : 0.99 # Value at Risk constraint for the first trade, ignored if None - note this is not a confidence value, but a direct return threshold 
+                 #(e.g. 0.8 means the wealth of the portfolio in the first period must be at least 80% of the initial wealth)
+
+misspecification_alpha : 0.0 # The standard deviation of the noise added to the market parameters (betas, vol premia, sector coeffs)
+                             # to simulate model misspecification. Set to 0 to turn off misspecification.
 
 

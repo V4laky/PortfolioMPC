@@ -2,8 +2,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-def plot_simulations(dfs:list[pd.DataFrame], labels):
-    fig, ax = plt.subplots(1, len(labels), figsize=(16, 6))
+def plot_simulations(dfs:list[pd.DataFrame], labels:list[str], ax=None, return_ax = False):
+    if ax is None:
+        fig, ax = plt.subplots(1, len(labels), figsize=(16, 6))
+
+    assert ax.size >= len(labels)
     
     low = min([df.min().min() for df in dfs])
     high = max([df.max().max() for df in dfs])
@@ -11,16 +14,34 @@ def plot_simulations(dfs:list[pd.DataFrame], labels):
     low = 0.9*low if low > 0 else 1.1*low
     high = 1.1*high if high > 0 else 0.9*high
 
-    for i, (label, df) in enumerate(zip(labels, dfs)):    
-        ax[i].plot(df.mean(), label='mean')
-        ax[i].fill_between(df.columns, df.mean() - df.std(), df.mean() + df.std(), alpha=0.2, label="mean ± std")
-        ax[i].plot(df.max(), label = 'max', linestyle="--", color='green')
-        ax[i].plot(df.min(), label = 'min', linestyle="--", color="red")
+    if ax.ndim == 1:
+        for i, (label, df) in enumerate(zip(labels, dfs)):    
+            ax[i].plot(df.mean(), label='mean')
+            ax[i].fill_between(df.columns, df.mean() - df.std(), df.mean() + df.std(), alpha=0.2, label="mean ± std")
+            ax[i].plot(df.max(), label = 'max', linestyle="--", color='green')
+            ax[i].plot(df.min(), label = 'min', linestyle="--", color="red")
 
-        ax[i].set_title(f"{label}")
-        ax[i].set_ylim(0.9*low, 1.1*high)
+            ax[i].set_title(f"{label}")
+            ax[i].set_ylim(0.9*low, 1.1*high)
 
-        ax[i].legend()
+            ax[i].legend()
+        
+    if ax.ndim == 2:
+        xx, yy = ax.shape[0], ax.shape[1]
+        for i, (label, df) in enumerate(zip(labels, dfs)):    
+            ax[i//yy, i%yy].plot(df.mean(), label='mean')
+            ax[i//yy, i%yy].fill_between(df.columns, df.mean() - df.std(), df.mean() + df.std(), alpha=0.2, label="mean ± std")
+            ax[i//yy, i%yy].plot(df.max(), label = 'max', linestyle="--", color='green')
+            ax[i//yy, i%yy].plot(df.min(), label = 'min', linestyle="--", color="red")
+
+            ax[i//yy, i%yy].set_title(f"{label}")
+            ax[i//yy, i%yy].set_ylim(0.9*low, 1.1*high)
+
+            ax[i//yy, i%yy].legend()
+
+        if ax.size > len(labels):
+            for i in range(len(labels), ax.size):
+                ax[i//yy, i%yy].axis('off')
 
 
 def compute_returns(dfs:list[pd.DataFrame], names:list[str]):
@@ -83,8 +104,10 @@ def compute_metrics(returns:dict[str:pd.DataFrame], rf):
         # sharpe ratio
         dd.update(compute_from_simulation_level((ret.mean() - rf) / ret.std(), name="sharpe ratios"))
 
+        semivar = (np.maximum(0, ret.mean() - ret)**2).mean()
+
         # sortino ratio
-        dd.update(compute_from_simulation_level((ret.mean() - rf) / np.maximum(0, -ret).std(), name="sortino ratios"))
+        dd.update(compute_from_simulation_level((ret.mean() - rf) / np.sqrt(semivar), name="sortino ratios"))
         
         # average drawdown
         drawdown = 1 - (cum_ret / cum_ret.cummax())
@@ -92,6 +115,16 @@ def compute_metrics(returns:dict[str:pd.DataFrame], rf):
 
         # max drawdown
         dd.update(compute_from_simulation_level(drawdown.max(), name="max drawdowns"))
+
+        # VaR
+        dd.update(compute_from_simulation_level(ret.quantile(0.05, axis=1), name="95% VaR"))
+
+        # CVaR
+        cvar = []
+        for i in ret.columns:
+            cvar.append(ret[i][ret[i] < ret[i].quantile(0.05)].mean())
+        cvar = pd.Series(cvar)
+        dd.update(compute_from_simulation_level(cvar, name="95% CVaR"))
 
         # put all into dataframe
         metrics[name] = pd.Series(dd)

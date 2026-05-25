@@ -4,7 +4,7 @@ import numpy as np
 
 class MPCController():
 
-    def __init__(self, K, T, N, risk_free, risk, trade=0.005, risk_type='variance', cvar_alpha=None):
+    def __init__(self, K, T, N, risk_free, risk, trade=0.005, risk_type='variance', cvar_alpha=None, return_VAR=None):
 
         risk_types = ('variance', 'semi_variance', 'cvar')
         if risk_type not in risk_types:
@@ -22,6 +22,12 @@ class MPCController():
                         "Results may be unstable. "
                         "Consider increasing the number of scenarios."
                     )
+        # Raise error if return_VAR is greater than 1, as it might cause infeasibility
+        if return_VAR is not None and return_VAR > 1:
+            warnings.warn(
+                f"return_VAR of {return_VAR:.2f} may lead to infeasibility. "
+                "Consider setting return_VAR to a value less than or equal to 1."
+                )
 
         self.risk_type = risk_type
 
@@ -31,6 +37,7 @@ class MPCController():
         self.r = [cp.Parameter((K,N), name=f'returns_time_{t}') for t in range(T)]
 
         self.scaled_risk = cp.Parameter(nonneg=True)
+        self.return_VAR = cp.Constant(return_VAR, name='return_VAR') if return_VAR is not None else None
 
         self.risk_free = cp.Constant(risk_free, name='risk free rate')
 
@@ -81,6 +88,10 @@ class MPCController():
 
         constraints.append(self.z == cp.sum(final_wealth) / K)
         
+        if return_VAR is not None:
+            #constraints += [final_wealth >= return_VAR * cp.sum(self.x0)] # Terminal Value at Risk constraint
+            constraints += [cp.sum(self.x[1], axis=1) >= self.return_VAR * cp.sum(self.x0)] # First trade Value at Risk constraint
+
         if risk_type == 'variance':
             risk_measure = cp.var(final_wealth)
 

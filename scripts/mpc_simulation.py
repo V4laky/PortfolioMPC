@@ -57,9 +57,14 @@ def main():
 
     trade_cost = config['trade_cost'] # 5bps - 20bps
     risk = config['risk']
+    VAR_constraint = config['return_VAR']
+
+    misspec_alpha = config['misspecification_alpha']
 
     controller = MPCController(K, T, N, risk_free=rf, risk=risk, trade=trade_cost, 
-                               risk_type=config['risk_type'], cvar_alpha=config['cvar_alpha'])
+                               risk_type=config['risk_type'], cvar_alpha=config['cvar_alpha'], return_VAR=VAR_constraint)
+    
+    betas, vol_premia, sector_coeffs = market.betas.copy(), market.vol_premia.copy(), market.sector_coeffs.copy()
 
     # MPC simulation
 
@@ -75,6 +80,11 @@ def main():
         MPC_trades = np.zeros((n_simulations, n_steps, N+1))
 
         for i in tqdm(range(n_simulations), desc='Simulations', position=0):
+
+            if misspec_alpha > 0:
+                market.betas = betas * (1 + np.random.standard_normal(size=betas.shape) * misspec_alpha)
+                market.vol_premia = vol_premia * (1 + np.random.standard_normal(size=vol_premia.shape) * misspec_alpha)
+                market.sector_coeffs = sector_coeffs * (1 + np.random.standard_normal(size=sector_coeffs.shape) * misspec_alpha)
 
             actual_traj, market_return, context = load_simulation(dataset_path, i)
 
